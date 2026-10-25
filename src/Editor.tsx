@@ -1,14 +1,14 @@
 import {useEffect,useState} from 'react';import {Link,useSearchParams} from 'react-router-dom';import {onAuthStateChanged,User} from 'firebase/auth';
 import {auth} from './firebase';import {CV,DEMO} from './cv';import {TEMPLATES,FAMILIES,Family,byId} from './registry';import CVRender from './CVRender';import {saveCV} from './cvs';import {PAYMENTS_READY} from './payments';
 function List({label,items,fields,onChange}:{label:string;items:any[];fields:[string,string][];onChange:(v:any[])=>void}){return <div className="mb-4"><h3 className="font-bold text-navy mb-2">{label}</h3>
-{items.map((it,i)=><div key={i} className="border rounded-xl p-2 mb-2 bg-white">{fields.map(([k,ph])=><input key={k} className="inp" placeholder={ph} value={it[k]||''} onChange={e=>onChange(items.map((x,j)=>j===i?{...x,[k]:e.target.value}:x))}/>)}
+{items.map((it,i)=><div key={i} className="border rounded-xl p-2 mb-2 bg-white">{fields.map(([k,ph])=>{const f=(e:any)=>onChange(items.map((x,j)=>j===i?{...x,[k]:e.target.value}:x));return k==='desc'?<textarea key={k} rows={3} className="inp" placeholder={ph} value={it[k]||''} onChange={f}/>:<input key={k} className="inp" placeholder={ph} value={it[k]||''} onChange={f}/>})}
 <button className="text-red-600 text-sm" onClick={()=>onChange(items.filter((_,j)=>j!==i))}>Remover</button></div>)}<button className="btn-o" onClick={()=>onChange([...items,{}])}>+ Adicionar</button></div>}
 const resize=(f:File):Promise<string>=>new Promise(r=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,300/Math.max(i.width,i.height));c.width=i.width*s;c.height=i.height*s;c.getContext('2d')!.drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.8))};i.src=URL.createObjectURL(f)});
 export default function Editor(){const [q]=useSearchParams();
-const [cv,setCv]=useState<CV>(()=>{try{return JSON.parse(localStorage.getItem('cv-draft')||'')}catch{return DEMO}});
+const [cv,setCv]=useState<CV>(()=>{try{return JSON.parse(localStorage.getItem('cv-draft2')||'')}catch{return DEMO}});
 const [tid,setTid]=useState(q.get('t')||TEMPLATES.find(t=>t.family===q.get('f'))?.id||'moderno-1');
 const [fam,setFam]=useState<Family>(byId(tid).family);const [tab,setTab]=useState<'dados'|'modelo'|'ver'>('dados');const [user,setUser]=useState<User|null>(null);const [msg,setMsg]=useState('');
-useEffect(()=>onAuthStateChanged(auth,setUser),[]);useEffect(()=>{localStorage.setItem('cv-draft',JSON.stringify(cv))},[cv]);
+useEffect(()=>onAuthStateChanged(auth,setUser),[]);useEffect(()=>{localStorage.setItem('cv-draft2',JSON.stringify(cv))},[cv]);
 const set=(k:keyof CV,v:any)=>setCv({...cv,[k]:v});const t=byId(tid);
 const inp=(k:keyof CV,ph:string)=><input className="inp" placeholder={ph} value={(cv[k] as string)||''} onChange={e=>set(k,e.target.value)}/>;
 const save=async()=>{if(!user){setMsg('Entra na conta para guardar.');return}try{await saveCV(user.uid,'cv-1',cv,tid);setMsg('Guardado.')}catch{setMsg('Erro ao guardar. Verifica o Firebase (.env e regras).')}};
@@ -19,8 +19,9 @@ return <div className="min-h-screen bg-slate-100"><header className="bg-navy tex
 {tab==='dados'&&<div>{inp('name','Nome completo')}{inp('role','Profissão pretendida')}<textarea className="inp" rows={3} placeholder="Resumo profissional (sem inventar qualificações)" value={cv.summary} onChange={e=>set('summary',e.target.value)}/>{inp('phone','Telefone')}{inp('email','E-mail')}{inp('location','Localização')}
 <label className="block mb-3 text-sm">Fotografia (opcional)<input type="file" accept="image/*" className="block" onChange={async e=>{const f=e.target.files?.[0];if(f)set('photo',await resize(f))}}/></label>
 <List label="Formação académica" items={cv.education} fields={[['course','Curso'],['inst','Instituição'],['period','Período']]} onChange={v=>set('education',v)}/>
-<List label="Experiência profissional" items={cv.experience} fields={[['role','Cargo'],['org','Empresa'],['period','Período'],['desc','Responsabilidades']]} onChange={v=>set('experience',v)}/>
+<List label="Experiência profissional" items={cv.experience} fields={[['role','Cargo'],['org','Empresa'],['period','Período'],['desc','Responsabilidades (uma por linha)']]} onChange={v=>set('experience',v)}/>
 <List label="Idiomas" items={cv.languages} fields={[['name','Idioma'],['level','Nível']]} onChange={v=>set('languages',v)}/>
+<List label="Dados pessoais (opcional: nascimento, estado civil, BI, filiação…)" items={cv.personal||[]} fields={[['k','Campo (ex.: Estado civil)'],['v','Valor']]} onChange={v=>set('personal',v)}/><List label="Referências (opcional)" items={cv.refs||[]} fields={[['name','Nome'],['role','Cargo e empresa'],['contact','Contacto']]} onChange={v=>set('refs',v)}/>
 <h3 className="font-bold text-navy mb-1">Competências (uma por linha)</h3><textarea className="inp" rows={4} value={cv.skills.join('\n')} onChange={e=>set('skills',e.target.value.split('\n'))}/>
 <h3 className="font-bold text-navy mb-1">Cursos e certificados (um por linha)</h3><textarea className="inp" rows={3} value={cv.courses.join('\n')} onChange={e=>set('courses',e.target.value.split('\n'))}/></div>}
 {tab==='modelo'&&<div><div className="flex gap-2 overflow-x-auto mb-3">{(Object.keys(FAMILIES) as Family[]).map(f=><button key={f} onClick={()=>setFam(f)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${fam===f?'bg-navy text-white':'bg-white text-navy'}`}>{FAMILIES[f].label}</button>)}</div>
