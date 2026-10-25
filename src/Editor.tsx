@@ -1,0 +1,30 @@
+import {useEffect,useState} from 'react';import {Link,useSearchParams} from 'react-router-dom';import {onAuthStateChanged,User} from 'firebase/auth';
+import {auth} from './firebase';import {CV,DEMO} from './cv';import {TEMPLATES,FAMILIES,Family,byId} from './registry';import CVRender from './CVRender';import {saveCV} from './cvs';import {PAYMENTS_READY} from './payments';
+function List({label,items,fields,onChange}:{label:string;items:any[];fields:[string,string][];onChange:(v:any[])=>void}){return <div className="mb-4"><h3 className="font-bold text-navy mb-2">{label}</h3>
+{items.map((it,i)=><div key={i} className="border rounded-xl p-2 mb-2 bg-white">{fields.map(([k,ph])=><input key={k} className="inp" placeholder={ph} value={it[k]||''} onChange={e=>onChange(items.map((x,j)=>j===i?{...x,[k]:e.target.value}:x))}/>)}
+<button className="text-red-600 text-sm" onClick={()=>onChange(items.filter((_,j)=>j!==i))}>Remover</button></div>)}<button className="btn-o" onClick={()=>onChange([...items,{}])}>+ Adicionar</button></div>}
+const resize=(f:File):Promise<string>=>new Promise(r=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,300/Math.max(i.width,i.height));c.width=i.width*s;c.height=i.height*s;c.getContext('2d')!.drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.8))};i.src=URL.createObjectURL(f)});
+export default function Editor(){const [q]=useSearchParams();
+const [cv,setCv]=useState<CV>(()=>{try{return JSON.parse(localStorage.getItem('cv-draft')||'')}catch{return DEMO}});
+const [tid,setTid]=useState(q.get('t')||TEMPLATES.find(t=>t.family===q.get('f'))?.id||'moderno-1');
+const [fam,setFam]=useState<Family>(byId(tid).family);const [tab,setTab]=useState<'dados'|'modelo'|'ver'>('dados');const [user,setUser]=useState<User|null>(null);const [msg,setMsg]=useState('');
+useEffect(()=>onAuthStateChanged(auth,setUser),[]);useEffect(()=>{localStorage.setItem('cv-draft',JSON.stringify(cv))},[cv]);
+const set=(k:keyof CV,v:any)=>setCv({...cv,[k]:v});const t=byId(tid);
+const inp=(k:keyof CV,ph:string)=><input className="inp" placeholder={ph} value={(cv[k] as string)||''} onChange={e=>set(k,e.target.value)}/>;
+const save=async()=>{if(!user){setMsg('Entra na conta para guardar.');return}try{await saveCV(user.uid,'cv-1',cv,tid);setMsg('Guardado.')}catch{setMsg('Erro ao guardar. Verifica o Firebase (.env e regras).')}};
+const scale=Math.min(1,(Math.min(window.innerWidth,900)-24)/794);
+return <div className="min-h-screen bg-slate-100"><header className="bg-navy text-white flex justify-between px-4 py-3"><Link to="/" className="font-bold">CV <span className="text-brand">Profissional</span></Link><Link to="/entrar" className="text-sm underline">{user?user.email:'Entrar'}</Link></header>
+<nav className="flex bg-white shadow sticky top-0 z-10">{(['dados','modelo','ver'] as const).map(x=><button key={x} onClick={()=>setTab(x)} className={`flex-1 py-3 font-semibold ${tab===x?'text-brand border-b-4 border-brand':'text-navy'}`}>{x==='dados'?'Dados':x==='modelo'?'Modelos':'Pré-visualizar'}</button>)}</nav>
+<div className="p-3 max-w-3xl mx-auto">
+{tab==='dados'&&<div>{inp('name','Nome completo')}{inp('role','Profissão pretendida')}<textarea className="inp" rows={3} placeholder="Resumo profissional (sem inventar qualificações)" value={cv.summary} onChange={e=>set('summary',e.target.value)}/>{inp('phone','Telefone')}{inp('email','E-mail')}{inp('location','Localização')}
+<label className="block mb-3 text-sm">Fotografia (opcional)<input type="file" accept="image/*" className="block" onChange={async e=>{const f=e.target.files?.[0];if(f)set('photo',await resize(f))}}/></label>
+<List label="Formação académica" items={cv.education} fields={[['course','Curso'],['inst','Instituição'],['period','Período']]} onChange={v=>set('education',v)}/>
+<List label="Experiência profissional" items={cv.experience} fields={[['role','Cargo'],['org','Empresa'],['period','Período'],['desc','Responsabilidades']]} onChange={v=>set('experience',v)}/>
+<List label="Idiomas" items={cv.languages} fields={[['name','Idioma'],['level','Nível']]} onChange={v=>set('languages',v)}/>
+<h3 className="font-bold text-navy mb-1">Competências (uma por linha)</h3><textarea className="inp" rows={4} value={cv.skills.join('\n')} onChange={e=>set('skills',e.target.value.split('\n'))}/>
+<h3 className="font-bold text-navy mb-1">Cursos e certificados (um por linha)</h3><textarea className="inp" rows={3} value={cv.courses.join('\n')} onChange={e=>set('courses',e.target.value.split('\n'))}/></div>}
+{tab==='modelo'&&<div><div className="flex gap-2 overflow-x-auto mb-3">{(Object.keys(FAMILIES) as Family[]).map(f=><button key={f} onClick={()=>setFam(f)} className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${fam===f?'bg-navy text-white':'bg-white text-navy'}`}>{FAMILIES[f].label}</button>)}</div>
+<div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{TEMPLATES.filter(x=>x.family===fam).map(x=><button key={x.id} onClick={()=>{setTid(x.id);setTab('ver')}} className={`bg-white rounded-xl p-2 shadow text-left ${tid===x.id?'ring-4 ring-brand':''}`}><div style={{height:170,overflow:'hidden'}}><div style={{zoom:.151}}><CVRender cv={cv} t={x}/></div></div><div className="text-sm font-semibold mt-1 text-navy">{x.name}</div></button>)}</div></div>}
+{tab==='ver'&&<div><div className="shadow-lg mx-auto bg-white" style={{width:794*scale,overflow:'hidden'}}><div style={{zoom:scale}}><CVRender cv={cv} t={t} wm/></div></div>
+<div className="mt-3 grid gap-2"><button className="btn" disabled={!PAYMENTS_READY} style={{opacity:PAYMENTS_READY?1:.5}}>Pagar com M-Pesa / e-Mola (pendente)</button><button className="btn-o" onClick={save}>Guardar na minha conta</button></div></div>}
+<p className="text-sm text-navy mt-3">{msg}</p></div></div>}

@@ -1,0 +1,8 @@
+import {Link} from 'react-router-dom';import {FAMILIES,TEMPLATES,Family} from './registry';import CVRender from './CVRender';import {DEMO} from './cv';
+export default function Home(){return <div className="min-h-screen bg-slate-50">
+<header className="bg-navy text-white flex justify-between items-center px-4 py-3"><b className="text-lg">CV <span className="text-brand">Profissional</span></b><Link to="/entrar" className="btn-o !border-white !text-white">Entrar</Link></header>
+<section className="bg-navy text-white px-5 pb-10 pt-6"><h1 className="text-3xl font-extrabold">Cria o teu CV profissional em poucos minutos</h1>
+<p className="mt-2 opacity-90">Preenche os teus dados, escolhe entre 60 modelos e prepara-te para novas oportunidades.</p><Link to="/editor" className="btn mt-5">Criar currículo</Link></section>
+<main className="p-4">{(Object.keys(FAMILIES) as Family[]).map(f=><section key={f} className="mb-6"><div className="flex justify-between items-center mb-2"><h2 className="font-bold text-navy text-xl">{FAMILIES[f].label}</h2><Link className="text-brand font-semibold text-sm" to={`/editor?f=${f}`}>Ver 10 modelos →</Link></div>
+<div className="flex gap-3 overflow-x-auto pb-2">{TEMPLATES.filter(t=>t.family===f).slice(0,5).map(t=><Link key={t.id} to={`/editor?t=${t.id}`} className="shrink-0 shadow rounded overflow-hidden" style={{width:120,height:170}}><div style={{zoom:.151}}><CVRender cv={DEMO} t={t}/></div></Link>)}</div></section>)}</main>
+<footer className="text-center text-sm text-slate-500 p-6">© CV Profissional · Moçambique · Pagamentos: M-Pesa e e-Mola (em breve)</footer></div>}
