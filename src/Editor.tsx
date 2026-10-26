@@ -4,14 +4,13 @@ function List({label,items,fields,onChange}:{label:string;items:any[];fields:[st
 {items.map((it,i)=><div key={i} className="border rounded-xl p-2 mb-2 bg-white">{fields.map(([k,ph])=>{const f=(e:any)=>onChange(items.map((x,j)=>j===i?{...x,[k]:e.target.value}:x));return <div key={k}><div className="text-xs font-semibold text-slate-600 mb-1">{ph}</div>{k==='desc'?<textarea rows={3} className="inp" placeholder={ph} value={it[k]||''} onChange={f}/>:<input className="inp" placeholder={ph} value={it[k]||''} onChange={f}/>}</div>})}
 <button className="text-red-600 text-sm" onClick={()=>onChange(items.filter((_,j)=>j!==i))}>Remover</button></div>)}<button className="btn-o" onClick={()=>onChange([...items,{}])}>+ Adicionar</button></div>}
 const resize=(f:File):Promise<string>=>new Promise(r=>{const i=new Image();i.onload=()=>{const c=document.createElement('canvas');const s=Math.min(1,300/Math.max(i.width,i.height));c.width=i.width*s;c.height=i.height*s;c.getContext('2d')!.drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',.8))};i.src=URL.createObjectURL(f)});
-// Só para testes do dono: com VITE_PDF_TESTE=true no Vercel o PDF sai sem marca de água. REMOVER antes de vender.
-const SEM_MARCA=import.meta.env.VITE_PDF_TESTE==='true';
+
 export default function Editor(){const [q]=useSearchParams();
 const [cv,setCv]=useState<CV>(()=>{try{return JSON.parse(localStorage.getItem('cv-draft2')||'')}catch{return DEMO}});
 const [tid,setTid]=useState(q.get('t')||TEMPLATES.find(t=>t.family===q.get('f'))?.id||'moderno-1');
 const [fam,setFam]=useState<Family>(byId(tid).family);const [tab,setTab]=useState<'dados'|'modelo'|'ver'>('dados');const [user,setUser]=useState<User|null>(null);const [msg,setMsg]=useState('');const [paid,setPaid]=useState(false);
 useEffect(()=>onAuthStateChanged(auth,setUser),[]);useEffect(()=>{if(!user){setPaid(false);return}return onSnapshot(doc(db,'users',user.uid,'cvs','cv-1'),s=>setPaid(s.data()?.paid===true),()=>setPaid(false))},[user]);useEffect(()=>{localStorage.setItem('cv-draft2',JSON.stringify(cv))},[cv]);
-const set=(k:keyof CV,v:any)=>setCv({...cv,[k]:v});const t=byId(tid);const livre=SEM_MARCA||paid;
+const set=(k:keyof CV,v:any)=>setCv({...cv,[k]:v});const t=byId(tid);const livre=paid;
 const EX:any={name:'Ex.: Maria João Cumbane',role:'Ex.: Assistente Administrativa',phone:'Ex.: +258 84 000 0000',email:'Ex.: nome@email.com',location:'Ex.: Maputo, Moçambique'};
 const inp=(k:keyof CV,ph:string)=><div><div className="text-sm font-semibold text-navy mb-1">{ph}</div><input className="inp" placeholder={EX[k]||ph} value={(cv[k] as string)||''} onChange={e=>set(k,e.target.value)}/></div>;
 const save=async()=>{if(!user){setMsg('Entra na conta para guardar.');return}try{await saveCV(user.uid,'cv-1',cv,tid);setMsg('Guardado.')}catch{setMsg('Erro ao guardar. Verifica o Firebase (.env e regras).')}};
