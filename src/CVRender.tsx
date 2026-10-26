@@ -2,7 +2,7 @@ import {CSSProperties as C,ReactNode as N} from 'react';import {CV} from './cv';
 export default function CVRender({cv,t,wm}:{cv:CV;t:Tpl;wm?:boolean|'p'}){
 const P=t.primary,A=t.accent,tint=P+'1f',lt=t.tone==='l',cls=t.family==='classico',sbBg=lt?tint:P,sbFg=lt?'#111':'#fff';
 const dl=t.layout==='TC'||t.head==='spaced';const mark=cls||t.family==='academico'?'❖':'•';
-const per=(cv.personal||[]).filter(p=>p.k||p.v),refs=cv.refs||[];
+const per=(cv.personal||[]).filter(p=>p.v),refs=cv.refs||[];
 const cl=[['☎',cv.phone],['✉',cv.email],['⌂',cv.location]].filter(x=>x[1]);
 const sk=cv.skills.filter(Boolean),co=cv.courses.filter(Boolean);
 const wgt=(cv.summary||'').length+cv.experience.reduce((a,e)=>a+60+(e.desc||'').length,0)+cv.education.length*60+sk.length*28+co.length*45+refs.length*70+per.length*30+cv.languages.length*20;
