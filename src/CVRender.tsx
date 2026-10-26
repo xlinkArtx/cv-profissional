@@ -62,5 +62,5 @@ return <div style={{width:794,minHeight:1123,background:'#fff',fontFamily:"'Time
 {t.family==='criativo'&&ab({top:-80,right:-80,width:240,height:240,borderRadius:'50%',background:tint,zIndex:-1})}
 {!cls&&(t.layout==='SG'||t.layout==='TC')&&ab({bottom:0,left:0,right:0,height:10,background:P,zIndex:3})}
 {body}
-{wm&&<>{wm!=='p'&&<div style={{position:'absolute',left:0,right:0,bottom:0,height:'50%',backdropFilter:'blur(4px)',WebkitBackdropFilter:'blur(4px)'}}/>}
+{wm&&<><div style={{position:'absolute',left:0,right:0,bottom:0,height:'50%',backdropFilter:'blur(6px)',WebkitBackdropFilter:'blur(6px)',background:'rgba(255,255,255,.38)',zIndex:4}}/>
 <div style={{position:wm==='p'?'fixed':'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',pointerEvents:'none',zIndex:5}}><div style={{transform:'rotate(-30deg)',fontSize:wm==='p'?46:38,fontWeight:800,color:wm==='p'?'rgba(249,115,22,.28)':'rgba(249,115,22,.35)',textAlign:'center'}}>CV PROFISSIONAL<br/>PRÉ-VISUALIZAÇÃO</div></div></>}</div>}
