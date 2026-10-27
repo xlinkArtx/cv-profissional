@@ -13,26 +13,43 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if dono(userId);
-      // Criar: nunca com campos protegidos; única excepção, o contador a 1 numa conta já paga (contas antigas).
-      allow create: if dono(userId) && (
-        !request.resource.data.keys().hasAny(protegidos())
-        || (request.resource.data.keys().hasOnly(['downloadsUsed'])
-            && request.resource.data.downloadsUsed == 1
-            && contaPaga(userId)));
-      // Actualizar: nunca mexe nos campos protegidos; única excepção, somar exactamente 1 ao contador, sem passar o limite.
-      allow update: if dono(userId) && (
-        !request.resource.data.diff(resource.data).affectedKeys().hasAny(protegidos())
-        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadsUsed'])
-            && contaPaga(userId)
-            && request.resource.data.downloadsUsed == resource.data.get('downloadsUsed', 0) + 1
-            && request.resource.data.downloadsUsed <= resource.data.get('downloadsLimit', 10)));
-      // Apagar o documento reiniciaria o contador.
+      // A conta principal não guarda os contadores. Mantém os campos de pagamento protegidos.
+      allow create: if dono(userId) && !request.resource.data.keys().hasAny(protegidos());
+      allow update: if dono(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protegidos());
       allow delete: if false;
 
       match /cvs/{cvId} {
+        function alteracoes() {
+          return request.resource.data.diff(resource.data).affectedKeys();
+        }
+        function inicializarContadores() {
+          return alteracoes().hasOnly(['downloadsUsed', 'downloadsLimit'])
+            && (!alteracoes().hasAny(['downloadsUsed'])
+                || (!resource.data.keys().hasAny(['downloadsUsed'])
+                    && request.resource.data.downloadsUsed == 0))
+            && (!alteracoes().hasAny(['downloadsLimit'])
+                || (!resource.data.keys().hasAny(['downloadsLimit'])
+                    && request.resource.data.downloadsLimit == 10));
+        }
+        function incrementarContador() {
+          return alteracoes().hasOnly(['downloadsUsed'])
+            && contaPaga(userId)
+            && request.resource.data.downloadsUsed == resource.data.get('downloadsUsed', 0) + 1
+            && request.resource.data.downloadsUsed <= resource.data.get('downloadsLimit', 10);
+        }
+
         allow read, delete: if dono(userId);
-        allow create: if dono(userId) && !request.resource.data.keys().hasAny(protegidos());
-        allow update: if dono(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protegidos());
+        allow create: if dono(userId) && (
+          !request.resource.data.keys().hasAny(protegidos())
+          || (cvId == 'cv-1'
+              && request.resource.data.keys().hasOnly(['downloadsUsed', 'downloadsLimit'])
+              && request.resource.data.downloadsUsed == 0
+              && request.resource.data.downloadsLimit == 10)
+        );
+        allow update: if dono(userId) && (
+          !alteracoes().hasAny(protegidos())
+          || (cvId == 'cv-1' && (inicializarContadores() || incrementarContador()))
+        );
       }
     }
   }
