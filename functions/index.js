@@ -1,43 +1,49 @@
+const functions = require('firebase-functions/v1');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { onDocumentWritten } = require('firebase-functions/v2/firestore');
-const functions = require('firebase-functions');
 const { initializeApp } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
 initializeApp();
 const db = getFirestore();
 
-/**
- * Cria os campos por defeito assim que uma nova conta Firebase é registada.
- * set(..., {merge:true}) preserva os outros dados da conta.
- */
+async function ensureFields(uid) {
+  const ref = db.doc(`users/${uid}`);
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const data = snap.exists ? snap.data() : {};
+    const updates = {};
+
+    if (!Number.isInteger(data.downloadsUsed) || data.downloadsUsed < 0) {
+      updates.downloadsUsed = 0;
+    }
+    if (!Number.isInteger(data.downloadsLimit) || data.downloadsLimit < 0) {
+      updates.downloadsLimit = 10;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      tx.set(ref, updates, { merge: true });
+    }
+  });
+}
+
+// Cria os campos quando uma conta nova é registada (Google ou email).
 exports.initializeDownloadFieldsOnSignup = functions.auth.user().onCreate(async (user) => {
-  await db.doc(`users/${user.uid}`).set({
-    downloadsUsed: 0,
-    downloadsLimit: 10
-  }, { merge: true });
+  await ensureFields(user.uid);
 });
 
-/**
- * Corrige documentos de contas antigas na próxima escrita em users/{uid}.
- * O Admin SDK ignora as regras do Firestore; o cliente continua sem permissão
- * para alterar downloadsLimit ou paid.
- */
+// Também cria os campos para contas antigas quando entram no site.
+exports.ensureDownloadFieldsOnAccess = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'É necessário iniciar sessão.');
+  }
+  await ensureFields(request.auth.uid);
+  return { ok: true };
+});
+
+// Recupera documentos antigos quando forem escritos, sem substituir valores existentes.
 exports.initializeDownloadFields = onDocumentWritten('users/{uid}', async (event) => {
   const snapshot = event.data && event.data.after;
   if (!snapshot || !snapshot.exists) return;
-
-  const data = snapshot.data() || {};
-  const updates = {};
-
-  if (!Number.isInteger(data.downloadsUsed) || data.downloadsUsed < 0) {
-    updates.downloadsUsed = 0;
-  }
-
-  if (!Number.isInteger(data.downloadsLimit) || data.downloadsLimit < 0) {
-    updates.downloadsLimit = 10;
-  }
-
-  if (Object.keys(updates).length > 0) {
-    await snapshot.ref.set(updates, { merge: true });
-  }
+  await ensureFields(event.params.uid);
 });
