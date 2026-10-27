@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function dono(uid) { return request.auth != null && request.auth.uid == uid; }
+    function protegidos() { return ['paid','payment','paymentStatus','downloadAllowed','orderId','downloadsUsed','downloadsLimit']; }
+    function docConta(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function docLegado(uid) { return /databases/$(database)/documents/users/$(uid)/cvs/cv-1; }
+    function contaPaga(uid) {
+      return (exists(docConta(uid)) && get(docConta(uid)).data.get('paid', false) == true)
+          || (exists(docLegado(uid)) && get(docLegado(uid)).data.get('paid', false) == true);
+    }
+
+    match /users/{userId} {
+      allow read: if dono(userId);
+      // Criar: nunca com campos protegidos; única excepção, o contador a 1 numa conta já paga (contas antigas).
+      allow create: if dono(userId) && (
+        !request.resource.data.keys().hasAny(protegidos())
+        || (request.resource.data.keys().hasOnly(['downloadsUsed'])
+            && request.resource.data.downloadsUsed == 1
+            && contaPaga(userId)));
+      // Actualizar: nunca mexe nos campos protegidos; única excepção, somar exactamente 1 ao contador, sem passar o limite.
+      allow update: if dono(userId) && (
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(protegidos())
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadsUsed'])
+            && contaPaga(userId)
+            && request.resource.data.downloadsUsed == resource.data.get('downloadsUsed', 0) + 1
+            && request.resource.data.downloadsUsed <= resource.data.get('downloadsLimit', 10)));
+      // Apagar o documento reiniciaria o contador.
+      allow delete: if false;
+
+      match /cvs/{cvId} {
+        allow read, delete: if dono(userId);
+        allow create: if dono(userId) && !request.resource.data.keys().hasAny(protegidos());
+        allow update: if dono(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protegidos());
+      }
+    }
+  }
+}
