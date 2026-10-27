@@ -7,7 +7,20 @@ service cloud.firestore {
     }
 
     function protegidos() {
-      return ['paid', 'payment', 'paymentStatus', 'downloadAllowed', 'orderId'];
+      return ['paid', 'payment', 'paymentStatus', 'downloadAllowed', 'orderId', 'downloadsUsed', 'downloadsLimit'];
+    }
+
+    function docConta(uid) {
+      return /databases/$(database)/documents/users/$(uid);
+    }
+
+    function docLegado(uid) {
+      return /databases/$(database)/documents/users/$(uid)/cvs/cv-1;
+    }
+
+    function contaPaga(uid) {
+      return (exists(docConta(uid)) && get(docConta(uid)).data.get('paid', false) == true)
+        || (exists(docLegado(uid)) && get(docLegado(uid)).data.get('paid', false) == true);
     }
 
     match /users/{userId} {
@@ -15,17 +28,52 @@ service cloud.firestore {
       allow create: if dono(userId)
         && !request.resource.data.keys().hasAny(protegidos());
       allow update: if dono(userId)
-        && !request.resource.data.diff(resource.data)
-          .affectedKeys().hasAny(protegidos());
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protegidos());
       allow delete: if false;
 
       match /cvs/{cvId} {
+        function alteracoes() {
+          return request.resource.data.diff(resource.data).affectedKeys();
+        }
+
+        function inicializarContadores() {
+          return cvId == 'cv-1'
+            && alteracoes().hasOnly(['downloadsUsed', 'downloadsLimit'])
+            && (
+              !alteracoes().hasAny(['downloadsUsed'])
+              || (!resource.data.keys().hasAny(['downloadsUsed'])
+                  && request.resource.data.downloadsUsed == 0)
+            )
+            && (
+              !alteracoes().hasAny(['downloadsLimit'])
+              || request.resource.data.downloadsLimit == 30
+            );
+        }
+
+        function incrementarContador() {
+          return cvId == 'cv-1'
+            && alteracoes().hasOnly(['downloadsUsed', 'downloadsLimit'])
+            && contaPaga(userId)
+            && request.resource.data.downloadsUsed == resource.data.get('downloadsUsed', 0) + 1
+            && request.resource.data.downloadsUsed <= 30
+            && request.resource.data.downloadsLimit == 30;
+        }
+
         allow read, delete: if dono(userId);
-        allow create: if dono(userId)
-          && !request.resource.data.keys().hasAny(protegidos());
-        allow update: if dono(userId)
-          && !request.resource.data.diff(resource.data)
-            .affectedKeys().hasAny(protegidos());
+
+        allow create: if dono(userId) && (
+          !request.resource.data.keys().hasAny(protegidos())
+          || (cvId == 'cv-1'
+              && request.resource.data.keys().hasOnly(['downloadsUsed', 'downloadsLimit'])
+              && request.resource.data.downloadsUsed == 0
+              && request.resource.data.downloadsLimit == 30)
+        );
+
+        allow update: if dono(userId) && (
+          !alteracoes().hasAny(protegidos())
+          || inicializarContadores()
+          || incrementarContador()
+        );
       }
     }
   }
