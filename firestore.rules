@@ -46,7 +46,7 @@ service cloud.firestore {
             )
             && (
               !alteracoes().hasAny(['downloadsLimit'])
-              || request.resource.data.downloadsLimit == 25
+              || request.resource.data.downloadsLimit == 15
             );
         }
 
@@ -55,8 +55,8 @@ service cloud.firestore {
             && alteracoes().hasOnly(['downloadsUsed', 'downloadsLimit'])
             && contaPaga(userId)
             && request.resource.data.downloadsUsed == resource.data.get('downloadsUsed', 0) + 1
-            && request.resource.data.downloadsUsed <= 25
-            && request.resource.data.downloadsLimit == 25;
+            && request.resource.data.downloadsUsed <= 15
+            && request.resource.data.downloadsLimit == 15;
         }
 
         allow read, delete: if dono(userId);
@@ -66,7 +66,7 @@ service cloud.firestore {
           || (cvId == 'cv-1'
               && request.resource.data.keys().hasOnly(['downloadsUsed', 'downloadsLimit'])
               && request.resource.data.downloadsUsed == 0
-              && request.resource.data.downloadsLimit == 25)
+              && request.resource.data.downloadsLimit == 15)
         );
 
         allow update: if dono(userId) && (
