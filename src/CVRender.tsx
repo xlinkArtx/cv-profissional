@@ -40,7 +40,7 @@ const E=(d:string,ti:string,sub:string,body:N,i:number)=>dl?
 <div key={i} style={{display:'grid',gridTemplateColumns:cls?'78px 1fr':'90px 1fr',gap:8,marginBottom:eg,breakInside:'avoid'}}><div style={{fontSize:fs-2,fontWeight:700,color:cls?'#111':P}}>{d}</div><div><b>{ti}</b>{sub&&<div style={{fontStyle:'italic'}}>{sub}</div>}{body}</div></div>:
 <div key={i} style={{marginBottom:eg,breakInside:'avoid'}}><div style={{display:'flex',justifyContent:'space-between',gap:8}}><b>{ti}</b><span style={{fontSize:fs-1.5,whiteSpace:'nowrap',color:cls?'#111':P,fontWeight:cls?400:700}}>{d}</span></div>{sub&&<div style={{fontStyle:'italic'}}>{sub}</div>}{body}</div>;
 const profile=cv.summary?S('Resumo profissional',<p style={{margin:0,textAlign:'justify'}}>{cv.summary}</p>):null;
-const yearKey=(period?:string)=>{const s=(period||'').toLowerCase();if(/presente|actual|atual|current|hoje/.test(s))return 9999;const ys=(s.match(/(?:19|20)\\d{2}/g)||[]).map(Number);return ys.length?Math.max(...ys):0};
+const yearKey=(period?:string)=>{const s=(period||'').toLowerCase();if(/presente|actual|atual|current|hoje/.test(s))return 9999;const ys=(s.match(/(?:19|20)\d{2}/g)||[]).map(Number);return ys.length?Math.max(...ys):0};
 const expSorted=[...cv.experience].sort((a,b)=>yearKey(b.period)-yearKey(a.period));
 const eduSorted=[...cv.education].sort((a,b)=>yearKey(b.period)-yearKey(a.period));
 const exp=expSorted.length?S('Experiência profissional',expSorted.map((e,i)=>E(e.period||'',(e.role||'').toUpperCase(),e.org||'',B(e.desc||''),i))):null;
