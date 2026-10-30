@@ -67,15 +67,16 @@ service cloud.firestore {
         );
     }
 
+    // Só existe um documento por produto (carta-1 / decl-1): qualquer outro nome é recusado.
     function podeCriar(uid, docId, idOk, campo, limite) {
-      return dono(uid) && (
+      return dono(uid) && docId == idOk && (
         !request.resource.data.keys().hasAny(protegidos())
         || criarContador(uid, docId, idOk, campo, limite)
       );
     }
 
     function podeAtualizar(uid, docId, idOk, campo, limite) {
-      return dono(uid) && (
+      return dono(uid) && docId == idOk && (
         !mudancas().hasAny(protegidos())
         || iniciarContador(docId, idOk, limite)
         || subirContador(uid, docId, idOk, campo, limite)
@@ -119,7 +120,10 @@ service cloud.firestore {
             && request.resource.data.downloadsLimit == 7;
         }
 
-        allow read, delete: if dono(userId);
+        allow read: if dono(userId);
+
+        // Sem apagar: se o utilizador pudesse apagar e voltar a criar o CV, o contador de downloads voltava a zero.
+        allow delete: if false;
 
         allow create: if dono(userId) && (
           !request.resource.data.keys().hasAny(protegidos())
