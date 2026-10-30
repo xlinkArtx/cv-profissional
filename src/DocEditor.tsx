@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react';import {createPortal} from 'react-dom';
 import {onAuthStateChanged,signInWithPopup,GoogleAuthProvider,User} from 'firebase/auth';
 import {onSnapshot,doc,runTransaction,setDoc,serverTimestamp} from 'firebase/firestore';import {auth,db} from './firebase';
 import {PRODUTOS,ADMIN_EMAIL,linkPagamentoProduto,precoTxt} from './payments';
-import {ProdutoDoc,DocTpl,docTemplates,docById,DEMOS,VAZIOS,FORMS,Campo} from './registry-docs';
+import {ProdutoDoc,DocTpl,docTemplates,docById,DEMOS,VAZIOS,FORMS,Campo,TEXTOS_CARTA,temPlaceholders} from './registry-docs';
 import CartaRender from './CartaRender';import DeclRender from './DeclRender';
 
 // Desenha o documento certo para cada produto (função normal, não componente, para não recriar a folha a cada alteração).
@@ -30,7 +30,9 @@ const ilimitado=user?.email?.toLowerCase()===ADMIN_EMAIL;const livre=ilimitado||
 const entrar=async()=>{setMsg('');try{await signInWithPopup(auth,new GoogleAuthProvider())}catch(x:any){setMsg(x.code==='auth/unauthorized-domain'?'Falta autorizar este endereço no Firebase (Domínios autorizados).':x.code==='auth/popup-closed-by-user'?'Entrada cancelada.':'Não foi possível entrar com Google: '+(x.code||'erro'))}};
 const save=async()=>{if(!user){setMsg('Entra na conta para guardar.');return}try{await setDoc(doc(db,'users',user.uid,P.colecao,P.docId),{...d,templateId:tid,updatedAt:serverTimestamp()},{merge:true});setMsg('Guardado.')}catch{setMsg('Erro ao guardar. Verifica o Firebase (regras publicadas).')}};
 const pagar=()=>{if(!user){setMsg('Entra com a tua conta Google antes de pagar, para ligarmos o pagamento ao teu acesso.');return}window.location.href=linkPagamentoProduto(produto,user.email||'',user.uid)};
-const pdf=async()=>{if(busy)return;setBusy(true);let limpo=false;
+const pdf=async()=>{if(busy)return;
+if(produto==='cartas'&&temPlaceholders(d)&&!window.confirm('Ainda há partes entre [ ] por preencher no texto da carta. Descarregar o PDF mesmo assim?'))return;
+setBusy(true);let limpo=false;
 if(user&&ilimitado){limpo=true}
 else if(user&&paid){try{limpo=await runTransaction(db,async tx=>{const ref=doc(db,'users',user.uid,P.colecao,P.docId);const accountRef=doc(db,'users',user.uid);const sn=await tx.get(ref);const account=await tx.get(accountRef);const x:any=sn.data()||{};const a:any=account.data()||{};const usedNow=Number.isInteger(x.downloadsUsed)&&x.downloadsUsed>=0?x.downloadsUsed:0;if(a[P.campoPago]!==true||usedNow>=P.limite)return false;tx.set(ref,{downloadsUsed:usedNow+1,downloadsLimit:P.limite},{merge:true});return true});if(!limpo)setMsg(`Atingiste os ${P.limite} downloads sem marca de água. Os próximos PDFs terão marca de água.`)}catch{setMsg('Não foi possível confirmar o download. O PDF será exportado com marca de água; tenta novamente.')}}
 setPrintClean(limpo);const old=document.title;document.title=P.ficheiro+'_'+(d.name||'documento').trim().replace(/\s+/g,'_');
@@ -64,6 +66,8 @@ return <div className="min-h-screen bg-slate-100"><header className="bg-navy tex
 {ilimitado&&<p className="text-sm text-green-700 mb-2">Acesso ilimitado a downloads sem marca de água.</p>}
 {tab==='dados'&&<div>
 <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 mb-3 text-sm text-navy">Os dados que vês são de <b>exemplo</b>. Substitui-os pelos teus.<button className="btn-o ml-2 !py-1" onClick={()=>{if(window.confirm('Apagar os dados de exemplo e começar com os campos vazios?'))setD(VAZIOS[produto]())}}>Limpar exemplo</button></div>
+{produto==='cartas'&&<div className="rounded-xl bg-white border p-3 mb-3"><h3 className="font-bold text-navy mb-1">Não sabes o que escrever?</h3><div className="text-sm text-slate-600 mb-2">Toca num texto-modelo. Ele preenche o assunto e os parágrafos (secções 5 e 6) com o teu nome, a tua profissão e a instituição. Depois edita à vontade e confirma o nome da vaga.</div><div className="grid gap-2">{TEXTOS_CARTA.map(x=><button key={x.id} className="btn-o text-left" onClick={()=>{if(window.confirm('Isto substitui o assunto, a saudação e os parágrafos atuais. Continuar?')){setD({...d,...x.gerar(d)});setMsg('Texto-modelo aplicado. Substitui o que estiver entre [ ].')}}}>{x.nome}</button>)}</div></div>}
+{produto==='cartas'&&temPlaceholders(d)&&<div className="rounded-xl bg-orange-50 border border-orange-300 p-3 mb-3 text-sm text-navy">Ainda há partes entre <b>[ ]</b> por preencher. Substitui-as pelo teu texto antes de descarregar.</div>}
 {FORMS[produto].map(g=><div key={g.titulo} className="rounded-xl bg-white border p-3 mb-3"><h3 className="font-bold text-navy mb-2">{g.titulo}</h3>{g.ajuda&&<div className="text-sm text-slate-600 mb-2">{g.ajuda}</div>}{g.lista?lista(g.lista):g.campos.map(campo)}</div>)}
 </div>}
 {tab==='modelo'&&<div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{docTemplates(produto).map(x=>{const thumbScale=Math.min(0.36,Math.max(0.12,((Math.min(window.innerWidth,900)-(window.innerWidth<640?68:72))/(window.innerWidth<640?2:3))/794));return <button key={x.id} onClick={()=>{setTid(x.id);setTab('ver')}} className={`bg-white rounded-xl p-2 shadow text-left ${tid===x.id?'ring-4 ring-brand':''}`}><div style={{height:Math.round(1122*thumbScale),width:'100%',overflow:'hidden',display:'flex',justifyContent:'center',background:'#f8fafc'}}><div style={{zoom:thumbScale,flexShrink:0,transformOrigin:'top center'}}>{desenhar(produto,d,x)}</div></div><div className="text-sm font-semibold mt-2 text-navy">{x.name}</div></button>})}</div>}

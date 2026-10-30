@@ -1,11 +1,26 @@
 // Registo dos modelos de cartas de apresentação e declarações de compromisso de honra.
-// Fase 1: um modelo de teste em cada produto.
+// Fase 2: 12 modelos de cartas e 5 textos-modelo. Declarações: ainda 1 modelo de teste (Fase 3).
 export type ProdutoDoc='cartas'|'declaracoes';
 
+// style escolhe o desenho no CartaRender / DeclRender; primary e accent são as cores do modelo.
 export interface DocTpl{id:string;produto:ProdutoDoc;name:string;style:string;primary:string;accent:string}
 
 export const DOC_TEMPLATES:DocTpl[]=[
-  {id:'carta-formal-1',produto:'cartas',name:'Carta formal',style:'formal',primary:'#0b2f5b',accent:'#f97316'},
+  // Cartas formais (letra Times, texto preto)
+  {id:'carta-formal-1',produto:'cartas',name:'Formal com cabeçalho',style:'formal',primary:'#0b2f5b',accent:'#f97316'},
+  {id:'carta-formal-2',produto:'cartas',name:'Formal moçambicana',style:'formal2',primary:'#111111',accent:'#111111'},
+  {id:'carta-formal-3',produto:'cartas',name:'Formal com título',style:'titulo',primary:'#111111',accent:'#0b2f5b'},
+  {id:'carta-formal-4',produto:'cartas',name:'Formal com moldura',style:'moldura',primary:'#0b2f5b',accent:'#f97316'},
+  // Cartas modernas (letra sem serifa, cor)
+  {id:'carta-moderna-1',produto:'cartas',name:'Faixa de contactos',style:'faixa',primary:'#111827',accent:'#dc2626'},
+  {id:'carta-moderna-2',produto:'cartas',name:'Barra lateral',style:'lateral',primary:'#0b2f5b',accent:'#f97316'},
+  {id:'carta-moderna-3',produto:'cartas',name:'Topo colorido',style:'topo',primary:'#0f766e',accent:'#f59e0b'},
+  {id:'carta-moderna-4',produto:'cartas',name:'Geométrica',style:'geo',primary:'#6d28d9',accent:'#f97316'},
+  {id:'carta-moderna-5',produto:'cartas',name:'Monograma',style:'timbre',primary:'#7f1d1d',accent:'#d97706'},
+  {id:'carta-moderna-6',produto:'cartas',name:'Minimalista',style:'minimal',primary:'#334155',accent:'#f97316'},
+  {id:'carta-moderna-7',produto:'cartas',name:'Rodapé colorido',style:'rodape',primary:'#15803d',accent:'#86efac'},
+  {id:'carta-moderna-8',produto:'cartas',name:'Duas colunas',style:'duascol',primary:'#0b2f5b',accent:'#f97316'},
+  // Declaração (Fase 3 acrescenta os restantes)
   {id:'decl-simples-1',produto:'declaracoes',name:'Declaração simples',style:'simples',primary:'#000000',accent:'#000000'}
 ];
 export const docTemplates=(p:ProdutoDoc)=>DOC_TEMPLATES.filter(t=>t.produto===p);
@@ -114,3 +129,57 @@ export const FORMS:Record<ProdutoDoc,Grupo[]>={
       {k:'signature',label:'Nome na assinatura',ph:'Se ficar vazio, usa o teu nome'}]}
   ]
 };
+
+
+// ---------- Textos-modelo das cartas ----------
+// Usam o nome, a profissão e a instituição que a pessoa já escreveu.
+// O que a pessoa ainda tem de preencher aparece entre [ ].
+const pl=(v:string|undefined,f:string)=>v&&v.trim()?v.trim():`[${f}]`;
+
+export interface TextoCarta{id:string;nome:string;gerar:(d:Carta)=>Partial<Carta>}
+
+export const TEXTOS_CARTA:TextoCarta[]=[
+  {id:'vaga',nome:'Candidatura a uma vaga anunciada',gerar:d=>{
+    const nome=pl(d.name,'o teu nome'),vaga=pl(d.role,'nome da vaga'),inst=d.destInst&&d.destInst.trim()?d.destInst.trim():'V. Exas.';
+    return {subject:`Candidatura à vaga de ${vaga}`,greeting:'Exmos Senhores,',
+      p1:`Chamo-me ${nome} e venho, por este meio, candidatar-me à vaga de ${vaga}, anunciada por ${inst}.`,
+      p2:'Possuo formação em [a tua formação] e experiência em [as tuas funções ou áreas de trabalho]. Tenho sentido de responsabilidade, facilidade em trabalhar em equipa e vontade de aprender.',
+      p3:'Considero que o meu perfil corresponde ao que procuram e gostaria de contribuir para o trabalho da vossa instituição.',
+      p4:'Junto o meu currículo em anexo e fico à disposição para uma entrevista, no dia e hora que considerarem mais convenientes.',
+      closing:'Com os melhores cumprimentos,'}}},
+  {id:'espontanea',nome:'Emprego espontâneo (sem vaga anunciada)',gerar:d=>{
+    const nome=pl(d.name,'o teu nome'),prof=pl(d.role,'a tua profissão'),inst=pl(d.destInst,'nome da instituição');
+    return {subject:'Candidatura espontânea',greeting:'Exmos Senhores,',
+      p1:`Chamo-me ${nome}, sou ${prof} e venho, por este meio, apresentar a minha candidatura espontânea para integrar a equipa de ${inst}, caso exista, agora ou no futuro, uma vaga adequada ao meu perfil.`,
+      p2:'Tenho formação em [a tua formação] e experiência em [as tuas funções ou áreas de trabalho]. Procuro uma oportunidade para pôr em prática o que aprendi e continuar a desenvolver-me profissionalmente.',
+      p3:'Sou uma pessoa responsável, pontual e disponível para aprender. Acredito que posso contribuir para os objectivos da vossa instituição.',
+      p4:'Junto o meu currículo em anexo e fico à disposição para qualquer esclarecimento ou entrevista.',
+      closing:'Com os melhores cumprimentos,'}}},
+  {id:'estagio',nome:'Pedido de estágio',gerar:d=>{
+    const nome=pl(d.name,'o teu nome'),inst=pl(d.destInst,'nome da instituição');
+    return {subject:'Pedido de estágio profissional',greeting:'Exmos Senhores,',
+      p1:`Chamo-me ${nome}, sou [estudante ou finalista] do curso de [nome do curso] na [nome da instituição de ensino] e venho solicitar a V. Exas. a oportunidade de realizar um estágio profissional em ${inst}.`,
+      p2:'O estágio permitir-me-ia aplicar na prática os conhecimentos adquiridos durante a formação e conhecer melhor o dia a dia da profissão.',
+      p3:'Comprometo-me a cumprir o horário e as regras da instituição e a dedicar-me com seriedade às tarefas que me forem confiadas.',
+      p4:'Junto o meu currículo em anexo e fico à disposição para qualquer esclarecimento.',
+      closing:'Com os melhores cumprimentos,'}}},
+  {id:'pedido',nome:'Pedido de emprego',gerar:d=>{
+    const nome=pl(d.name,'o teu nome'),funcao=pl(d.role,'função pretendida'),inst=pl(d.destInst,'nome da instituição');
+    return {subject:'Pedido de emprego',greeting:'Exmo. Senhor Director,',
+      p1:`Chamo-me ${nome} e venho, respeitosamente, solicitar a V. Exa. um lugar de trabalho em ${inst}, na função de ${funcao}.`,
+      p2:'Tenho formação em [a tua formação] e experiência em [as tuas funções ou áreas de trabalho].',
+      p3:'Estou disponível para começar de imediato e comprometo-me a desempenhar as funções com seriedade, pontualidade e dedicação.',
+      p4:'Na expectativa de uma resposta favorável, subscrevo-me com elevada estima e consideração.',
+      closing:'Atenciosamente,'}}},
+  {id:'concurso',nome:'Concurso público',gerar:d=>{
+    const nome=pl(d.name,'o teu nome'),vaga=pl(d.role,'nome da vaga'),inst=pl(d.destInst,'nome da instituição');
+    return {subject:`Candidatura ao concurso público para ${vaga}`,greeting:'Exmos Senhores,',
+      p1:`Chamo-me ${nome} e venho, por este meio, candidatar-me ao concurso público para o preenchimento da vaga de ${vaga}, aberto por ${inst} e anunciado em [jornal, rádio ou local do anúncio], no dia [data do anúncio].`,
+      p2:'Declaro que reúno os requisitos exigidos no anúncio, nomeadamente [os requisitos principais do anúncio].',
+      p3:'Junto, para o efeito, os documentos exigidos: [lista dos documentos, por exemplo, currículo, cópia do BI e certificado de habilitações].',
+      p4:'Fico a aguardar a análise da minha candidatura e coloco-me à disposição para qualquer esclarecimento adicional.',
+      closing:'Com os melhores cumprimentos,'}}}
+];
+
+// Verdadeiro se ainda há partes entre [ ] por preencher no texto da carta.
+export const temPlaceholders=(d:any)=>/\[[^\]]+\]/.test([d.subject,d.greeting,d.p1,d.p2,d.p3,d.p4].join('\n'));
