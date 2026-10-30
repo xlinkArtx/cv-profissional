@@ -15,6 +15,11 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(uid);
     }
 
+    // Documento do produto: cartas/carta-1 ou declaracoes/decl-1.
+    function docProduto(uid, colecao, docId) {
+      return /databases/$(database)/documents/users/$(uid)/$(colecao)/$(docId);
+    }
+
     function docLegado(uid) {
       return /databases/$(database)/documents/users/$(uid)/cvs/cv-1;
     }
@@ -26,8 +31,9 @@ service cloud.firestore {
     }
 
     // Cartas e declarações: autorização própria por produto
-    function contaPagaCampo(uid, campo) {
-      return exists(docConta(uid)) && get(docConta(uid)).data.get(campo, false) == true;
+    function contaPagaCampo(uid, colecao, docId, campo) {
+      return exists(docProduto(uid, colecao, docId))
+        && get(docProduto(uid, colecao, docId)).data.get(campo, false) == true;
     }
 
     function mudancas() {
@@ -48,38 +54,38 @@ service cloud.firestore {
         );
     }
 
-    function subirContador(uid, docId, idOk, campo, limite) {
+    function subirContador(uid, docId, idOk, colecao, campo, limite) {
       return docId == idOk
         && mudancas().hasOnly(['downloadsUsed', 'downloadsLimit'])
-        && contaPagaCampo(uid, campo)
+        && contaPagaCampo(uid, colecao, idOk, campo)
         && request.resource.data.downloadsUsed == resource.data.get('downloadsUsed', 0) + 1
         && request.resource.data.downloadsUsed <= limite
         && request.resource.data.downloadsLimit == limite;
     }
 
-    function criarContador(uid, docId, idOk, campo, limite) {
+    function criarContador(uid, docId, idOk, colecao, campo, limite) {
       return docId == idOk
         && request.resource.data.keys().hasOnly(['downloadsUsed', 'downloadsLimit'])
         && request.resource.data.downloadsLimit == limite
         && (
           request.resource.data.downloadsUsed == 0
-          || (request.resource.data.downloadsUsed == 1 && contaPagaCampo(uid, campo))
+          || (request.resource.data.downloadsUsed == 1 && contaPagaCampo(uid, colecao, idOk, campo))
         );
     }
 
     // Só existe um documento por produto (carta-1 / decl-1): qualquer outro nome é recusado.
-    function podeCriar(uid, docId, idOk, campo, limite) {
+    function podeCriar(uid, docId, idOk, colecao, campo, limite) {
       return dono(uid) && docId == idOk && (
         !request.resource.data.keys().hasAny(protegidos())
-        || criarContador(uid, docId, idOk, campo, limite)
+        || criarContador(uid, docId, idOk, colecao, campo, limite)
       );
     }
 
-    function podeAtualizar(uid, docId, idOk, campo, limite) {
+    function podeAtualizar(uid, docId, idOk, colecao, campo, limite) {
       return dono(uid) && docId == idOk && (
         !mudancas().hasAny(protegidos())
         || iniciarContador(docId, idOk, limite)
-        || subirContador(uid, docId, idOk, campo, limite)
+        || subirContador(uid, docId, idOk, colecao, campo, limite)
       );
     }
 
@@ -140,21 +146,21 @@ service cloud.firestore {
         );
       }
 
-      // Cartas de apresentação (limite 5, autorização em users/{UID}.paidCartas)
+      // Cartas de apresentação (limite 5, autorização em users/{UID}/cartas/carta-1.paidCartas)
       // Sem apagar: assim o contador não pode ser reposto a zero pelo utilizador.
       match /cartas/{docId} {
         allow read: if dono(userId);
         allow delete: if false;
-        allow create: if podeCriar(userId, docId, 'carta-1', 'paidCartas', 5);
-        allow update: if podeAtualizar(userId, docId, 'carta-1', 'paidCartas', 5);
+        allow create: if podeCriar(userId, docId, 'carta-1', 'cartas', 'paidCartas', 5);
+        allow update: if podeAtualizar(userId, docId, 'carta-1', 'cartas', 'paidCartas', 5);
       }
 
-      // Declaração de Compromisso de Honra (limite 5, autorização em users/{UID}.paidDeclaracoes)
+      // Declaração de Compromisso de Honra (limite 5, autorização em users/{UID}/declaracoes/decl-1.paidDeclaracoes)
       match /declaracoes/{docId} {
         allow read: if dono(userId);
         allow delete: if false;
-        allow create: if podeCriar(userId, docId, 'decl-1', 'paidDeclaracoes', 5);
-        allow update: if podeAtualizar(userId, docId, 'decl-1', 'paidDeclaracoes', 5);
+        allow create: if podeCriar(userId, docId, 'decl-1', 'declaracoes', 'paidDeclaracoes', 5);
+        allow update: if podeAtualizar(userId, docId, 'decl-1', 'declaracoes', 'paidDeclaracoes', 5);
       }
     }
   }
