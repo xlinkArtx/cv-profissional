@@ -1,4 +1,4 @@
-import {ReactNode as N} from 'react';import {Link} from 'react-router-dom';import {FAMILIES,TEMPLATES,Family} from './registry';import CVRender from './CVRender';import {DEMO} from './cv';
+import MenuConta from './MenuConta';import {ReactNode as N} from 'react';import {Link} from 'react-router-dom';import {FAMILIES,TEMPLATES,Family} from './registry';import CVRender from './CVRender';import {DEMO} from './cv';
 import {docTemplates,DEMOS} from './registry-docs';import CartaRender from './CartaRender';import DeclRender from './DeclRender';import {PRODUTOS} from './payments';
 
 // Uma linha: título, "Ver todos" e miniaturas (página inteira, escala automática).
@@ -12,7 +12,7 @@ const cvs=(Object.keys(FAMILIES) as Family[]).map(f=>TEMPLATES.find(t=>t.family=
 const cartas=docTemplates('cartas').map(t=>({id:t.id,to:`${PRODUTOS.cartas.rota}?t=${t.id}`,nome:t.name,mini:<CartaRender d={DEMOS.cartas} t={t}/>}));
 const decls=docTemplates('declaracoes').map(t=>({id:t.id,to:`${PRODUTOS.declaracoes.rota}?t=${t.id}`,nome:t.name,mini:<DeclRender d={DEMOS.declaracoes} t={t}/>}));
 return <div className="min-h-screen bg-slate-50">
-<header className="bg-navy text-white flex justify-between items-center px-4 py-3"><b className="text-lg">CV <span className="text-brand">Profissional</span></b><Link to="/entrar" className="btn-o !border-white !text-white">Entrar</Link></header>
+<header className="bg-navy text-white flex justify-between items-center px-4 py-3"><b className="text-lg">CV <span className="text-brand">Profissional</span></b><MenuConta/></header>
 <section className="bg-navy text-white px-5 pb-10 pt-6"><h1 className="text-3xl font-extrabold">Currículos, cartas e declarações prontos em minutos</h1>
 <p className="mt-2 opacity-90">Preenche os teus dados, escolhe um modelo e descarrega em PDF, direto no telemóvel.</p><Link to="/editor" className="btn mt-5">Criar currículo</Link></section>
 <main className="p-4">

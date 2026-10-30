@@ -25,7 +25,7 @@ export interface ProdutoCfg{
 export const PRODUTOS:Record<Produto,ProdutoCfg>={
   cvs:{nome:'Currículos (CVs)',preco:250,limite:7,campoPago:'paid',colecao:'cvs',docId:'cv-1',rota:'/editor',
     acesso:'a todos os modelos de currículos',chamada:'DESBLOQUEIA TODOS OS MODELOS',oQue:'o teu CV',rascunho:'cv-draft2',ficheiro:'CV'},
-  cartas:{nome:'Cartas de apresentação',preco:150,limite:5,campoPago:'paidCartas',colecao:'cartas',docId:'carta-1',rota:'/cartas',
+  cartas:{nome:'Cartas de apresentação',preco:100,limite:5,campoPago:'paidCartas',colecao:'cartas',docId:'carta-1',rota:'/cartas',
     acesso:'às cartas de apresentação',chamada:'DESBLOQUEIA AS CARTAS DE APRESENTAÇÃO',oQue:'as tuas cartas',rascunho:'carta-draft1',ficheiro:'Carta'},
   declaracoes:{nome:'Declaração de Compromisso de Honra',preco:100,limite:5,campoPago:'paidDeclaracoes',colecao:'declaracoes',docId:'decl-1',rota:'/declaracoes',
     acesso:'à Declaração de Compromisso de Honra',chamada:'DESBLOQUEIA A DECLARAÇÃO DE COMPROMISSO DE HONRA',oQue:'a tua declaração',rascunho:'decl-draft1',ficheiro:'Declaracao'}

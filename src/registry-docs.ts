@@ -1,5 +1,5 @@
 // Registo dos modelos de cartas de apresentação e declarações de compromisso de honra.
-// Fase 2: 12 modelos de cartas e 5 textos-modelo. Declarações: ainda 1 modelo de teste (Fase 3).
+// Cartas: 12 modelos e 5 textos-modelo. Declarações: 8 modelos e 6 finalidades com declarações-modelo.
 export type ProdutoDoc='cartas'|'declaracoes';
 
 // style escolhe o desenho no CartaRender / DeclRender; primary e accent são as cores do modelo.
@@ -20,8 +20,15 @@ export const DOC_TEMPLATES:DocTpl[]=[
   {id:'carta-moderna-6',produto:'cartas',name:'Minimalista',style:'minimal',primary:'#334155',accent:'#f97316'},
   {id:'carta-moderna-7',produto:'cartas',name:'Rodapé colorido',style:'rodape',primary:'#15803d',accent:'#86efac'},
   {id:'carta-moderna-8',produto:'cartas',name:'Duas colunas',style:'duascol',primary:'#0b2f5b',accent:'#f97316'},
-  // Declaração (Fase 3 acrescenta os restantes)
-  {id:'decl-simples-1',produto:'declaracoes',name:'Declaração simples',style:'simples',primary:'#000000',accent:'#000000'}
+  // Declarações de compromisso de honra (A4, texto preto, Times)
+  {id:'decl-simples-1',produto:'declaracoes',name:'Simples',style:'simples',primary:'#000000',accent:'#000000'},
+  {id:'decl-sublinhado-1',produto:'declaracoes',name:'Título sublinhado',style:'sublinhado',primary:'#000000',accent:'#000000'},
+  {id:'decl-moldura-1',produto:'declaracoes',name:'Moldura fina',style:'moldura',primary:'#000000',accent:'#000000'},
+  {id:'decl-moldura-2',produto:'declaracoes',name:'Moldura dupla',style:'moldura2',primary:'#000000',accent:'#000000'},
+  {id:'decl-grande-1',produto:'declaracoes',name:'Título grande',style:'grande',primary:'#000000',accent:'#000000'},
+  {id:'decl-esquerda-1',produto:'declaracoes',name:'Título à esquerda',style:'esquerda',primary:'#000000',accent:'#000000'},
+  {id:'decl-linhas-1',produto:'declaracoes',name:'Entre linhas',style:'linhas',primary:'#000000',accent:'#000000'},
+  {id:'decl-azul-1',produto:'declaracoes',name:'Título azul',style:'azul',primary:'#0b2f5b',accent:'#0b2f5b'}
 ];
 export const docTemplates=(p:ProdutoDoc)=>DOC_TEMPLATES.filter(t=>t.produto===p);
 export const docById=(p:ProdutoDoc,id:string)=>docTemplates(p).find(t=>t.id===id)||docTemplates(p)[0];
@@ -136,7 +143,7 @@ export const FORMS:Record<ProdutoDoc,Grupo[]>={
 // O que a pessoa ainda tem de preencher aparece entre [ ].
 const pl=(v:string|undefined,f:string)=>v&&v.trim()?v.trim():`[${f}]`;
 
-export interface TextoCarta{id:string;nome:string;gerar:(d:Carta)=>Partial<Carta>}
+export interface TextoCarta{id:string;nome:string;gerar:(d:any)=>any}
 
 export const TEXTOS_CARTA:TextoCarta[]=[
   {id:'vaga',nome:'Candidatura a uma vaga anunciada',gerar:d=>{
@@ -181,5 +188,38 @@ export const TEXTOS_CARTA:TextoCarta[]=[
       closing:'Com os melhores cumprimentos,'}}}
 ];
 
-// Verdadeiro se ainda há partes entre [ ] por preencher no texto da carta.
-export const temPlaceholders=(d:any)=>/\[[^\]]+\]/.test([d.subject,d.greeting,d.p1,d.p2,d.p3,d.p4].join('\n'));
+// Verdadeiro se ainda há partes entre [ ] por preencher (texto da carta ou declarações).
+export const temPlaceholders=(d:any)=>/\[[^\]]+\]/.test([d.subject,d.greeting,d.p1,d.p2,d.p3,d.p4,...(d.items||[])].join('\n'));
+
+
+// ---------- Finalidades das declarações (declarações-modelo, todas editáveis) ----------
+// O género (filho/filha) segue o sexo escolhido na identificação.
+const gx=(d:any,m:string,f:string)=>d.sexo==='m'?m:d.sexo==='f'?f:`${m}/${f.slice(-1)}`;
+const RESP='Assumo inteira responsabilidade, nos termos da lei, caso alguma das informações prestadas se mostre falsa.';
+
+export const TEXTOS_DECL:TextoCarta[]=[
+  {id:'emprego',nome:'Emprego',gerar:d=>({items:[
+    `Nunca fui ${gx(d,'expulso','expulsa')} de nenhuma instituição de ensino nem de nenhum local de trabalho.`,
+    'Todas as informações e documentos que apresentei para esta candidatura são verdadeiros.',
+    'Comprometo-me a apresentar os documentos que comprovem as informações prestadas, sempre que me forem solicitados.',RESP]})},
+  {id:'bolsa',nome:'Bolsa de estudo',gerar:d=>({items:[
+    'Todas as informações e documentos que apresentei na candidatura à bolsa de estudo são verdadeiros.',
+    'Não beneficio de outra bolsa de estudo para o mesmo curso.',
+    `Comprometo-me a dedicar-me aos estudos e a cumprir as regras da instituição que me conceder a bolsa.`,
+    `${RESP} Aceito, se for o caso, perder a bolsa.`]})},
+  {id:'concurso',nome:'Concurso',gerar:d=>({items:[
+    'Reúno todos os requisitos exigidos no anúncio do concurso.',
+    'Todos os documentos que apresento para o concurso são verdadeiros.',
+    'Conheço e aceito as condições e as regras do concurso.',RESP]})},
+  {id:'estagio',nome:'Estágio',gerar:d=>({items:[
+    `Sou estudante do curso de [nome do curso] na [nome da instituição de ensino].`,
+    `Nunca fui ${gx(d,'expulso','expulsa')} de nenhuma instituição de ensino.`,
+    'Comprometo-me a cumprir o horário e as regras do local de estágio e a dedicar-me com seriedade às tarefas que me forem confiadas.',RESP]})},
+  {id:'matricula',nome:'Matrícula',gerar:d=>({items:[
+    'Todos os dados e documentos que apresento para a matrícula são verdadeiros.',
+    `Nunca fui ${gx(d,'expulso','expulsa')} de nenhuma instituição de ensino.`,
+    'Comprometo-me a cumprir o regulamento da instituição de ensino.',RESP]})},
+  {id:'outra',nome:'Outra finalidade (texto geral)',gerar:d=>({items:[
+    `Nunca fui ${gx(d,'expulso','expulsa')} de nenhuma instituição de ensino nem de nenhum local de trabalho.`,
+    'Todas as informações que prestei são verdadeiras.',RESP]})}
+];
