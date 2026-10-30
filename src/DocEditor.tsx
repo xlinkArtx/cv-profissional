@@ -18,10 +18,9 @@ const [printClean,setPrintClean]=useState(false);const [busy,setBusy]=useState(f
 useEffect(()=>onAuthStateChanged(auth,setUser),[]);
 useEffect(()=>{if(!user){setPaid(false);setUsed(0);return}
 const ref=doc(db,'users',user.uid,P.colecao,P.docId);
-const stopA=onSnapshot(doc(db,'users',user.uid),s=>{const x:any=s.data()||{};setPaid(x[P.campoPago]===true)},()=>setPaid(false));
-const stopC=onSnapshot(ref,s=>{const x:any=s.data()||{};setUsed(Number.isInteger(x.downloadsUsed)&&x.downloadsUsed>=0?x.downloadsUsed:0)},()=>{});
+const stopC=onSnapshot(ref,s=>{const x:any=s.data()||{};setPaid(x[P.campoPago]===true);setUsed(Number.isInteger(x.downloadsUsed)&&x.downloadsUsed>=0?x.downloadsUsed:0)},()=>{setPaid(false)});
 runTransaction(db,async tx=>{const sn=await tx.get(ref);const x:any=sn.data()||{};const patch:any={};if(!Number.isInteger(x.downloadsUsed)||x.downloadsUsed<0)patch.downloadsUsed=0;if(x.downloadsLimit!==P.limite)patch.downloadsLimit=P.limite;if(Object.keys(patch).length)tx.set(ref,patch,{merge:true})}).catch(err=>console.error('Não foi possível inicializar o contador de downloads:',err));
-return()=>{stopA();stopC()}},[user]);
+return()=>{stopC()}},[user]);
 useEffect(()=>{try{localStorage.setItem(P.rascunho,JSON.stringify(d))}catch{}},[d]);
 
 const set=(k:string,v:any)=>setD({...d,[k]:v});const t=docById(produto,tid);
@@ -34,7 +33,7 @@ const pdf=async()=>{if(busy)return;
 if(produto==='cartas'&&temPlaceholders(d)&&!window.confirm('Ainda há partes entre [ ] por preencher no texto da carta. Descarregar o PDF mesmo assim?'))return;
 setBusy(true);let limpo=false;
 if(user&&ilimitado){limpo=true}
-else if(user&&paid){try{limpo=await runTransaction(db,async tx=>{const ref=doc(db,'users',user.uid,P.colecao,P.docId);const accountRef=doc(db,'users',user.uid);const sn=await tx.get(ref);const account=await tx.get(accountRef);const x:any=sn.data()||{};const a:any=account.data()||{};const usedNow=Number.isInteger(x.downloadsUsed)&&x.downloadsUsed>=0?x.downloadsUsed:0;if(a[P.campoPago]!==true||usedNow>=P.limite)return false;tx.set(ref,{downloadsUsed:usedNow+1,downloadsLimit:P.limite},{merge:true});return true});if(!limpo)setMsg(`Atingiste os ${P.limite} downloads sem marca de água. Os próximos PDFs terão marca de água.`)}catch{setMsg('Não foi possível confirmar o download. O PDF será exportado com marca de água; tenta novamente.')}}
+else if(user&&paid){try{limpo=await runTransaction(db,async tx=>{const ref=doc(db,'users',user.uid,P.colecao,P.docId);const sn=await tx.get(ref);const x:any=sn.data()||{};const usedNow=Number.isInteger(x.downloadsUsed)&&x.downloadsUsed>=0?x.downloadsUsed:0;if(x[P.campoPago]!==true||usedNow>=P.limite)return false;tx.set(ref,{downloadsUsed:usedNow+1,downloadsLimit:P.limite},{merge:true});return true});if(!limpo)setMsg(`Atingiste os ${P.limite} downloads sem marca de água. Os próximos PDFs terão marca de água.`)}catch{setMsg('Não foi possível confirmar o download. O PDF será exportado com marca de água; tenta novamente.')}}
 setPrintClean(limpo);const old=document.title;document.title=P.ficheiro+'_'+(d.name||'documento').trim().replace(/\s+/g,'_');
 const fim=()=>{setPrintClean(false);document.title=old;setBusy(false)};window.addEventListener('afterprint',fim,{once:true});setTimeout(()=>{window.print()},250);setTimeout(fim,300000)};
 
