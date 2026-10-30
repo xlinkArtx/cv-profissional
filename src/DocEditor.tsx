@@ -3,7 +3,7 @@ import {onAuthStateChanged,signInWithPopup,GoogleAuthProvider,User} from 'fireba
 import {onSnapshot,doc,runTransaction,setDoc,serverTimestamp} from 'firebase/firestore';import {auth,db} from './firebase';
 import {PRODUTOS,ADMIN_EMAIL,linkPagamentoProduto,precoTxt} from './payments';
 import {ProdutoDoc,DocTpl,docTemplates,docById,DEMOS,VAZIOS,FORMS,Campo,TEXTOS_CARTA,temPlaceholders} from './registry-docs';
-import CartaRender from './CartaRender';import DeclRender from './DeclRender';
+import MenuConta from './MenuConta';import CartaRender from './CartaRender';import DeclRender from './DeclRender';
 
 // Desenha o documento certo para cada produto (função normal, não componente, para não recriar a folha a cada alteração).
 const desenhar=(p:ProdutoDoc,dd:any,t:DocTpl,wm?:boolean|'p')=>p==='cartas'?<CartaRender d={dd} t={t} wm={wm}/>:<DeclRender d={dd} t={t} wm={wm}/>;
@@ -56,7 +56,7 @@ const painel=!ilimitado&&(!paid||atingiu)&&<div className="rounded-2xl border-2 
 :<button className="w-full rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-extrabold text-lg py-4 shadow-xl active:scale-95" onClick={entrar}>Entrar com Google para pagar</button>}
 <div className="text-xs text-slate-600 mt-2">O pagamento é combinado por WhatsApp. Depois de confirmarmos o pagamento, o acesso será atualizado.</div></div>;
 
-return <div className="min-h-screen bg-slate-100"><header className="bg-navy text-white flex justify-between items-center px-4 py-3"><Link to="/" className="font-bold">CV <span className="text-brand">Profissional</span></Link>{user?<span className="text-sm">{user.email}</span>:<button onClick={entrar} className="text-sm underline">Entrar</button>}</header>
+return <div className="min-h-screen bg-slate-100"><header className="bg-navy text-white flex justify-between items-center px-4 py-3"><Link to="/" className="font-bold">CV <span className="text-brand">Profissional</span></Link><MenuConta/></header>
 <nav className="flex bg-white shadow sticky top-0 z-10">{(['dados','modelo','ver'] as const).map(x=><button key={x} onClick={()=>setTab(x)} className={`flex-1 py-3 font-semibold ${tab===x?'text-brand border-b-4 border-brand':'text-navy'}`}>{x==='dados'?'Dados':x==='modelo'?'Modelos':'Pré-visualizar'}</button>)}</nav>
 <div className="p-3 max-w-3xl mx-auto">
 <h1 className="font-extrabold text-navy text-xl mb-2">{P.nome}</h1>
