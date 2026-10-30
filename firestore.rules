@@ -6,8 +6,9 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // Campos que o utilizador NUNCA pode escrever sozinho (só o administrador, pelo Console).
     function protegidos() {
-      return ['paid', 'payment', 'paymentStatus', 'downloadAllowed', 'orderId', 'downloadsUsed', 'downloadsLimit'];
+      return ['paid', 'paidCartas', 'paidDeclaracoes', 'payment', 'paymentStatus', 'downloadAllowed', 'orderId', 'downloadsUsed', 'downloadsLimit'];
     }
 
     function docConta(uid) {
@@ -18,9 +19,67 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(uid)/cvs/cv-1;
     }
 
+    // CVs (como estava)
     function contaPaga(uid) {
       return (exists(docConta(uid)) && get(docConta(uid)).data.get('paid', false) == true)
         || (exists(docLegado(uid)) && get(docLegado(uid)).data.get('paid', false) == true);
+    }
+
+    // Cartas e declarações: autorização própria por produto
+    function contaPagaCampo(uid, campo) {
+      return exists(docConta(uid)) && get(docConta(uid)).data.get(campo, false) == true;
+    }
+
+    function mudancas() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function iniciarContador(docId, idOk, limite) {
+      return docId == idOk
+        && mudancas().hasOnly(['downloadsUsed', 'downloadsLimit'])
+        && (
+          !mudancas().hasAny(['downloadsUsed'])
+          || (!resource.data.keys().hasAny(['downloadsUsed'])
+              && request.resource.data.downloadsUsed == 0)
+        )
+        && (
+          !mudancas().hasAny(['downloadsLimit'])
+          || request.resource.data.downloadsLimit == limite
+        );
+    }
+
+    function subirContador(uid, docId, idOk, campo, limite) {
+      return docId == idOk
+        && mudancas().hasOnly(['downloadsUsed', 'downloadsLimit'])
+        && contaPagaCampo(uid, campo)
+        && request.resource.data.downloadsUsed == resource.data.get('downloadsUsed', 0) + 1
+        && request.resource.data.downloadsUsed <= limite
+        && request.resource.data.downloadsLimit == limite;
+    }
+
+    function criarContador(uid, docId, idOk, campo, limite) {
+      return docId == idOk
+        && request.resource.data.keys().hasOnly(['downloadsUsed', 'downloadsLimit'])
+        && request.resource.data.downloadsLimit == limite
+        && (
+          request.resource.data.downloadsUsed == 0
+          || (request.resource.data.downloadsUsed == 1 && contaPagaCampo(uid, campo))
+        );
+    }
+
+    function podeCriar(uid, docId, idOk, campo, limite) {
+      return dono(uid) && (
+        !request.resource.data.keys().hasAny(protegidos())
+        || criarContador(uid, docId, idOk, campo, limite)
+      );
+    }
+
+    function podeAtualizar(uid, docId, idOk, campo, limite) {
+      return dono(uid) && (
+        !mudancas().hasAny(protegidos())
+        || iniciarContador(docId, idOk, limite)
+        || subirContador(uid, docId, idOk, campo, limite)
+      );
     }
 
     match /users/{userId} {
@@ -31,6 +90,7 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(protegidos());
       allow delete: if false;
 
+      // CVs: igual ao que já funcionava (limite 7)
       match /cvs/{cvId} {
         function alteracoes() {
           return request.resource.data.diff(resource.data).affectedKeys();
@@ -74,6 +134,23 @@ service cloud.firestore {
           || inicializarContadores()
           || incrementarContador()
         );
+      }
+
+      // Cartas de apresentação (limite 5, autorização em users/{UID}.paidCartas)
+      // Sem apagar: assim o contador não pode ser reposto a zero pelo utilizador.
+      match /cartas/{docId} {
+        allow read: if dono(userId);
+        allow delete: if false;
+        allow create: if podeCriar(userId, docId, 'carta-1', 'paidCartas', 5);
+        allow update: if podeAtualizar(userId, docId, 'carta-1', 'paidCartas', 5);
+      }
+
+      // Declaração de Compromisso de Honra (limite 5, autorização em users/{UID}.paidDeclaracoes)
+      match /declaracoes/{docId} {
+        allow read: if dono(userId);
+        allow delete: if false;
+        allow create: if podeCriar(userId, docId, 'decl-1', 'paidDeclaracoes', 5);
+        allow update: if podeAtualizar(userId, docId, 'decl-1', 'paidDeclaracoes', 5);
       }
     }
   }
